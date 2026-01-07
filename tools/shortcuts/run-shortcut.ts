@@ -14,7 +14,6 @@ export const registerRunShortcut = (server: McpServer) => {
 		},
 		async ({ shortcutName, inputText }) => {
 			try {
-				// Build command arguments safely
 				const args = ["shortcuts", "run", shortcutName];
 				if (inputText) {
 					args.push("-i", inputText);
