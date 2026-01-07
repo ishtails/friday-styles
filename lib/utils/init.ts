@@ -47,8 +47,5 @@ export const initializeGenerated = async (): Promise<void> => {
 		await Bun.write(logFile, "");
 	}
 
-	// Log current date/time on server initialization
-	const timestamp = Date.now();
-	const currentISO = new Date(timestamp).toISOString();
-	console.log(`Server initialized at: ${currentISO} (timestamp: ${timestamp})`);
+	// Server initialized - do not log to stdout as it breaks MCP protocol
 };

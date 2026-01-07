@@ -51,4 +51,4 @@ registerListShortcuts(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-console.log(`${config.serverName} MCP initialized\n`);
+// Server initialized - do not log to stdout as it breaks MCP protocol
