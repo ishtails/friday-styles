@@ -57,6 +57,9 @@ Add to Cursor settings (`Cmd/Ctrl + ,` → MCP):
 - **`list_drawings`** - List all Excalidraw drawings
 - **`manage_drawings`** - Create/update/delete Excalidraw drawings
 
+### Media (YouTube/yt-dlp)
+- **`download_media`** - Download videos or audio from YouTube and other supported sites using yt-dlp. Supports configurable quality, format options (video/audio/both), and custom output paths. Downloads are stored in the configured downloads directory.
+
 ### System
 - **`health_check`** - Check server health and validate state/profile
 
@@ -74,6 +77,7 @@ Add to Cursor settings (`Cmd/Ctrl + ,` → MCP):
 - `generated/changelog.txt` - Activity log
 - `generated/designs/` - Excalidraw drawings
 - `generated/notes/` - Obsidian vault
+- `generated/downloads/` - Downloaded media files (videos/audio)
 - `backups/` - Timestamped state backups from cleanup operations
 
 ## Configuration
@@ -93,6 +97,7 @@ Environment variables (defaults in `config.ts`):
 - `LOG_FILE` - Changelog path
 - `DESIGNS_DIR` - Drawings directory
 - `OBSIDIAN_VAULT` - Notes vault path
+- `DOWNLOADS_DIR` - Media downloads directory
 - `BACKUPS_DIR` - Backups directory
 - `GOOGLE_TOKEN_FILE` - Google OAuth credentials path
 
