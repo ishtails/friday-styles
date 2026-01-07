@@ -14,11 +14,13 @@ import { registerHealthCheck } from "./tools/health-check.ts";
 import { registerListNotes } from "./tools/obsidian/list-notes.ts";
 import { registerManageNote } from "./tools/obsidian/manage-note.ts";
 import { registerViewNote } from "./tools/obsidian/view-note.ts";
+import { registerListShortcuts } from "./tools/shortcuts/list-shortcuts.ts";
+import { registerRunShortcut } from "./tools/shortcuts/run-shortcut.ts";
 import { registerCaptureThought } from "./tools/user/capture-thought.ts";
 import { registerManageGoal } from "./tools/user/manage-goal.ts";
 import { registerManageProfile } from "./tools/user/manage-profile.ts";
 import { registerViewStatus } from "./tools/user/view-status.ts";
-import { registerDownloadMedia } from "./tools/youtube/download.ts";
+import { registerDownloadMedia } from "./tools/ytdlp/download.ts";
 
 const server = new McpServer({
 	name: config.serverName,
@@ -44,6 +46,8 @@ registerViewNote(server);
 registerDownloadMedia(server);
 registerListEvents(server);
 registerManageCalendarEvent(server);
+registerRunShortcut(server);
+registerListShortcuts(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
