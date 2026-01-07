@@ -1,0 +1,96 @@
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { config } from "@/config.ts";
+import { log } from "@/lib/utils/logger.ts";
+import { getProfile } from "@/lib/utils/profile.ts";
+import { getState } from "@/lib/utils/state.ts";
+
+export const registerViewStatus = (server: McpServer) => {
+	server.registerTool(
+		"view_status",
+		{
+			description: `${config.systemPrompt}\n\nView raw data for goals, ideas, and profile. Returns unprocessed data for LLM to parse and format.`,
+			inputSchema: {
+				view: z
+					.enum(["all", "goals", "ideas", "profile"])
+					.optional()
+					.default("all")
+					.describe("What to view"),
+				category: z
+					.string()
+					.optional()
+					.describe("Filter by category (any string, for goals and ideas)"),
+				limit: z
+					.number()
+					.optional()
+					.describe(
+						"Limit number of items returned (optional, no limit if not specified)",
+					),
+			},
+		},
+		async ({ view, category, limit }) => {
+			try {
+				const state = await getState();
+				const profile = await getProfile().catch(() => null); // Graceful degradation
+				const output: Record<string, unknown> = {};
+
+				if (view === "goals" || view === "all") {
+					let goals = state.data.goals;
+					if (category) {
+						goals = goals.filter((g) => g.category === category);
+					}
+					if (limit !== undefined) {
+						goals = goals.slice(0, limit);
+					}
+					output.goals = goals;
+				}
+
+				if (view === "ideas" || view === "all") {
+					let ideas = state.data.ideas;
+					if (category) {
+						ideas = ideas.filter((i) => i.category === category);
+					}
+					if (limit !== undefined) {
+						ideas = ideas.slice(0, limit);
+					}
+					output.ideas = ideas;
+				}
+
+				if ((view === "profile" || view === "all") && profile) {
+					output.profile = profile;
+				}
+
+				await log(
+					"info",
+					"view_status",
+					{ view, category, limit },
+					"Status viewed",
+				);
+
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(output, null, 2),
+						},
+					],
+				};
+			} catch (error) {
+				const errorMsg = `Failed to view status: ${String(error)}`;
+				await log("error", "view_status", { view, category }, errorMsg);
+				return {
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{ success: false, error: errorMsg },
+								null,
+								2,
+							),
+						},
+					],
+				};
+			}
+		},
+	);
+};

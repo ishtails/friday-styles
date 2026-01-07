@@ -1,0 +1,29 @@
+{
+	"name": "friday",
+	"version": "0.1.0",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run --hot index.ts",
+		"start": "bun run index.ts",
+		"check": "bunx biome check --write",
+		"authenticate": "bun run scripts/authenticate.ts",
+		"cleanup": "bun run scripts/cleanup.ts"
+	},
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/js-yaml": "^4.0.9"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.25.1",
+		"googleapis": "^169.0.0",
+		"hono": "^4.11.3",
+		"js-yaml": "^4.1.1",
+		"open": "^11.0.0",
+		"zod": "^4.3.4"
+	}
+}
