@@ -5,7 +5,7 @@ import { config } from "@/config.ts";
 import {
 	getLibraryMetadata,
 	parseLibraryFile,
-} from "@/lib/utils/excalidraw-libs.ts";
+} from "@/lib/utils/excalidraw.ts";
 import { log } from "@/lib/utils/logger.ts";
 import { resolvePath } from "@/lib/utils/path.ts";
 
