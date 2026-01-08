@@ -22,7 +22,9 @@ export const registerViewStatus = (server: McpServer) => {
 				tags: z
 					.array(z.string())
 					.optional()
-					.describe("Filter ideas/profile items that include all of these tags"),
+					.describe(
+						"Filter ideas/profile items that include all of these tags",
+					),
 				limit: z
 					.number()
 					.optional()

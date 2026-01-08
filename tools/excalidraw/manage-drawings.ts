@@ -9,7 +9,7 @@ export const registerManageDrawings = (server: McpServer) => {
 	server.registerTool(
 		"manage_drawings",
 		{
-			description: `${config.systemPrompt}\n\nCreate, update, or delete Excalidraw drawing files. For create: provide either a title (filename will be auto-generated) or a path. For update/delete: provide the path to the existing file. Can include metadata like 'title', 'tags', or 'createdAt' in the JSON content.`,
+			description: `${config.systemPrompt}\n\nCreate, update, or delete Excalidraw drawing files. Workflow for creating drawings with library components: 1) Use list_libraries to discover available libraries, 2) Use view_library to see all components in a library or filter by parameters, 3) Analyze components and decide which ones fit your drawing purpose, 4) Compose complete drawing JSON with elements from library components (adjust positions/IDs as needed) and any new elements you create, 5) Provide the complete composed JSON in the 'content' parameter. The drawing JSON should follow Excalidraw format. When copying elements from libraries, regenerate element IDs to ensure uniqueness and adjust x/y coordinates to position elements where you want them.`,
 			inputSchema: {
 				action: z
 					.enum(["create", "update", "delete"])
