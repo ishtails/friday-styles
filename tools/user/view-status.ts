@@ -14,12 +14,15 @@ export const registerViewStatus = (server: McpServer) => {
 				view: z
 					.enum(["all", "goals", "ideas", "profile"])
 					.optional()
-					.default("all")
-					.describe("What to view"),
+					.default("all"),
 				category: z
 					.string()
 					.optional()
-					.describe("Filter by category (any string, for goals and ideas)"),
+					.describe("Filter by category (for goals and ideas)"),
+				tags: z
+					.array(z.string())
+					.optional()
+					.describe("Filter ideas/profile items that include all of these tags"),
 				limit: z
 					.number()
 					.optional()
@@ -28,7 +31,7 @@ export const registerViewStatus = (server: McpServer) => {
 					),
 			},
 		},
-		async ({ view, category, limit }) => {
+		async ({ view, category, tags, limit }) => {
 			try {
 				const state = await getState();
 				const profile = await getProfile().catch(() => null); // Graceful degradation
@@ -50,6 +53,11 @@ export const registerViewStatus = (server: McpServer) => {
 					if (category) {
 						ideas = ideas.filter((i) => i.category === category);
 					}
+					if (tags && tags.length > 0) {
+						ideas = ideas.filter((i) =>
+							tags.every((tag) => i.tags.includes(tag)),
+						);
+					}
 					if (limit !== undefined) {
 						ideas = ideas.slice(0, limit);
 					}
@@ -57,13 +65,19 @@ export const registerViewStatus = (server: McpServer) => {
 				}
 
 				if ((view === "profile" || view === "all") && profile) {
-					output.profile = profile;
+					let items = profile.items;
+					if (tags && tags.length > 0) {
+						items = items.filter((item) =>
+							tags.every((tag) => item.tags.includes(tag)),
+						);
+					}
+					output.profile = { ...profile, items };
 				}
 
 				await log(
 					"info",
 					"view_status",
-					{ view, category, limit },
+					{ view, category, tags, limit },
 					"Status viewed",
 				);
 

@@ -4,7 +4,7 @@ import { config } from "@/config.ts";
 import type { ProfileItem } from "@/lib/db/schema.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
-import { createReferenceNote } from "@/lib/utils/note-ref.ts";
+import { createReferenceNote } from "@/lib/utils/notes.ts";
 import {
 	addItem,
 	deleteItem,
@@ -17,7 +17,7 @@ export const registerManageProfile = (server: McpServer) => {
 	server.registerTool(
 		"manage_profile",
 		{
-			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context. Can create reference notes in Obsidian for additional context/details.`,
+			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context. Can create reference markdown notes for additional context/details.`,
 			inputSchema: {
 				action: z
 					.enum(["add", "get", "update", "delete", "list"])
@@ -48,7 +48,7 @@ export const registerManageProfile = (server: McpServer) => {
 					.string()
 					.optional()
 					.describe(
-						"Reference note content with additional context/details to create in Obsidian for this profile item",
+						"Reference markdown note content with additional context/details to create for this profile item. Always prefer adding a reference note when user provides more than a paragraph of context/details.",
 					),
 			},
 		},

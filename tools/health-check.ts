@@ -8,7 +8,7 @@ export const registerHealthCheck = (server: McpServer) => {
 	server.registerTool(
 		"health_check",
 		{
-			description: `${config.systemPrompt}\n\nCheck server health and state/profile validity`,
+			description: `${config.systemPrompt}\n\nCheck server health and state/profile validity. Run it when asked "how are you?" or "how is the server doing?"`,
 		},
 		async () => {
 			try {

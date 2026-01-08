@@ -1,26 +1,18 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { google } from "googleapis";
 import { z } from "zod";
 import { config } from "@/config.ts";
 import type { KeyResult, Objective } from "@/lib/db/schema.ts";
-import {
-	convertToGoogleCalendarFormat,
-	parseDuration,
-	parseLocalTime,
-	validateEventTimes,
-	validateNotInPast,
-} from "@/lib/utils/datetime.ts";
-import { getAuthenticatedClient } from "@/lib/utils/google-auth.ts";
+import { createEvent } from "@/lib/utils/calendar.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
-import { createReferenceNote } from "@/lib/utils/note-ref.ts";
+import { createReferenceNote } from "@/lib/utils/notes.ts";
 import { getState, updateState } from "@/lib/utils/state.ts";
 
 export const registerManageGoal = (server: McpServer) => {
 	server.registerTool(
 		"manage_goal",
 		{
-			description: `${config.systemPrompt}\n\nManage active/paused goals with OKR (Objectives and Key Results) structure. Use this for CURRENT goals you're working on. Optionally, ask user if they want to add completed goals to their profile as achievements. Time sensitive goals should be created with a calendar event always. Can create reference notes in Obsidian for additional context/details.`,
+			description: `${config.systemPrompt}\n\nManage active/paused goals with OKR (Objectives and Key Results) structure. Use this for CURRENT goals you're working on. Optionally, ask user if they want to add completed goals to their profile as achievements. Time sensitive goals should be created with a calendar event always. Can create reference markdown notes for additional context/details.`,
 			inputSchema: {
 				action: z
 					.enum(["create", "update", "delete"])
@@ -83,7 +75,7 @@ export const registerManageGoal = (server: McpServer) => {
 					.string()
 					.optional()
 					.describe(
-						"Reference note content with additional context/details to create in Obsidian for this goal",
+						"Reference markdown note content with additional context/details to create for this goal. Always prefer adding a reference note when user provides more than a paragraph of context/details.",
 					),
 			},
 		},
@@ -140,46 +132,19 @@ export const registerManageGoal = (server: McpServer) => {
 						},
 					);
 
-					// Create calendar event first if requested
 					let calendarEventId: string | undefined;
 					let calendarEventLink: string | undefined;
 					if (calendarEvent) {
 						try {
-							const tz = calendarEvent.timezone || config.timezone;
-							const start = parseLocalTime(calendarEvent.startTime, tz);
-							validateNotInPast(start);
-
-							let end: Date;
-							if (calendarEvent.endTime) {
-								try {
-									const durationMinutes = parseDuration(calendarEvent.endTime);
-									end = new Date(start.getTime() + durationMinutes * 60 * 1000);
-								} catch {
-									end = parseLocalTime(calendarEvent.endTime, tz);
-								}
-							} else {
-								end = new Date(start.getTime() + 60 * 60 * 1000);
-							}
-
-							validateEventTimes(start, end);
-
-							const calendar = google.calendar({
-								version: "v3",
-								auth: await getAuthenticatedClient(),
+							const result = await createEvent({
+								title,
+								description,
+								startTime: calendarEvent.startTime,
+								endTime: calendarEvent.endTime,
+								timezone: calendarEvent.timezone || config.timezone,
 							});
-
-							const event = await calendar.events.insert({
-								calendarId: "primary",
-								requestBody: {
-									summary: title,
-									description: description || "",
-									start: convertToGoogleCalendarFormat(start, tz),
-									end: convertToGoogleCalendarFormat(end, tz),
-								},
-							});
-
-							calendarEventId = event.data.id || undefined;
-							calendarEventLink = event.data.htmlLink || undefined;
+							calendarEventId = result.id;
+							calendarEventLink = result.htmlLink;
 						} catch (error) {
 							await log(
 								"warn",

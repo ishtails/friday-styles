@@ -4,14 +4,14 @@ import { config } from "@/config.ts";
 import type { Idea } from "@/lib/db/schema.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
-import { createReferenceNote } from "@/lib/utils/note-ref.ts";
+import { createReferenceNote } from "@/lib/utils/notes.ts";
 import { getState, updateState } from "@/lib/utils/state.ts";
 
 export const registerCaptureThought = (server: McpServer) => {
 	server.registerTool(
 		"capture_thought",
 		{
-			description: `${config.systemPrompt}\n\nCapture TEMPORARY ideas, thoughts, or plans. Use for: 'I should try X', 'Maybe I could Y', 'What if Z'. DO NOT use for: Permanent knowledge ('I learned X'), established facts ('I always do Y'), achievements ('I completed Z'). For permanent data, use manage_profile directly. The system will organize and categorize them automatically. Can create reference notes in Obsidian for additional context/details.`,
+			description: `${config.systemPrompt}\n\nCapture TEMPORARY ideas, thoughts, or plans. Use for: 'I should try X', 'Maybe I could Y', 'What if Z'. DO NOT use for: Permanent knowledge ('I learned X'), established facts ('I always do Y'), achievements ('I completed Z'). For permanent data, use manage_profile directly. The system will organize and categorize them automatically. Can create reference markdown notes for additional context/details.`,
 			inputSchema: {
 				content: z
 					.string()
@@ -33,7 +33,7 @@ export const registerCaptureThought = (server: McpServer) => {
 					.string()
 					.optional()
 					.describe(
-						"Reference note content with additional context/details to create in Obsidian for this idea",
+						"Reference markdown note content with additional context/details to create for this idea. Always prefer adding a reference note when user provides more than a paragraph of context/details.",
 					),
 			},
 		},

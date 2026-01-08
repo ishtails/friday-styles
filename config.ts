@@ -7,16 +7,18 @@ Handle creative assets (Excalidraw, Obsidian) strategically. Keep users accounta
 Tactical partner, not just another AI.`;
 
 export const defaultCurrency = "USD";
+export const generatedDir = Bun.env.GENERATED_DIR || "./generated";
 
 export const config = {
-	stateFile: Bun.env.STATE_FILE || "./generated/state.yaml",
-	profileFile: Bun.env.PROFILE_FILE || "./generated/profile.yaml",
-	logFile: Bun.env.LOG_FILE || "./generated/changelog.txt",
-	designsDir: Bun.env.DESIGNS_DIR || "./generated/designs",
-	obsidianVault: Bun.env.OBSIDIAN_VAULT || "./generated/notes",
-	backupsDir: Bun.env.BACKUPS_DIR || "./backups",
-	downloadsDir: Bun.env.DOWNLOADS_DIR || "./generated/downloads",
-	googleTokenFile: Bun.env.GOOGLE_TOKEN_FILE || "./secrets/credentials.json",
+	generatedDir,
+	stateFile: `${generatedDir}/state.yaml`,
+	profileFile: `${generatedDir}/profile.yaml`,
+	logFile: `${generatedDir}/changelog.txt`,
+	designsDir: `${generatedDir}/designs`,
+	obsidianVault: `${generatedDir}/notes`,
+	backupsDir: `${generatedDir}/backups`,
+	downloadsDir: `${generatedDir}/downloads`,
+	googleTokenFile: `${generatedDir}/secrets/credentials.json`,
 	timezone:
 		Bun.env.TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone,
 	serverName,

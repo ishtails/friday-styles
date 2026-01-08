@@ -7,9 +7,6 @@ export const registerGetDate = (server: McpServer) => {
 		"get_date",
 		{
 			description: `${config.systemPrompt}\n\nGet current date and time. Returns timestamp, UTC ISO datetime string, user's timezone, and local time. Shows example formats accepted by calendar event tools.`,
-			inputSchema: {
-				// No parameters needed - just returns current date
-			},
 		},
 		async () => {
 			try {

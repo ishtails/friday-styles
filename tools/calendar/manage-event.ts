@@ -1,22 +1,19 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { google } from "googleapis";
 import { z } from "zod";
 import { config } from "@/config.ts";
 import {
-	convertToGoogleCalendarFormat,
-	parseDuration,
-	parseLocalTime,
-	validateEventTimes,
-	validateNotInPast,
-} from "@/lib/utils/datetime.ts";
-import { getAuthenticatedClient } from "@/lib/utils/google-auth.ts";
+	createEvent,
+	deleteEvent,
+	type Event,
+	updateEvent,
+} from "@/lib/utils/calendar.ts";
 import { log } from "@/lib/utils/logger.ts";
 
 export const registerManageCalendarEvent = (server: McpServer) => {
 	server.registerTool(
 		"manage_event",
 		{
-			description: `${config.systemPrompt}\n\nCreate, update, or delete events in Google Calendar. Times must be in format "DD-MM-YYYY HH-MM" (e.g., "01-01-2024 14-00"). Timezone conversion happens automatically using your configured timezone.`,
+			description: `${config.systemPrompt}\n\nCreate, update, or delete events in Google Calendar. Times must be in format "DD-MM-YYYY HH-MM" (e.g., "01-01-2024 14-00"). Timezone conversion happens automatically.`,
 			inputSchema: {
 				action: z
 					.enum(["create", "update", "delete"])
@@ -68,19 +65,13 @@ export const registerManageCalendarEvent = (server: McpServer) => {
 			sendUpdates = "none",
 		}) => {
 			try {
-				const calendar = google.calendar({
-					version: "v3",
-					auth: await getAuthenticatedClient(),
-				});
-
+				const tz = timezone || config.timezone;
 				let response: {
 					success: boolean;
 					message: string;
-					event?: unknown;
+					event?: Event;
 					eventLink?: string;
 				};
-
-				const tz = timezone || config.timezone;
 
 				switch (action) {
 					case "create": {
@@ -90,40 +81,19 @@ export const registerManageCalendarEvent = (server: McpServer) => {
 							);
 						}
 
-						const startDate = parseLocalTime(startTime, tz);
-						validateNotInPast(startDate);
-
-						let endDate: Date;
-						if (endTime) {
-							try {
-								const durationMinutes = parseDuration(endTime);
-								endDate = new Date(
-									startDate.getTime() + durationMinutes * 60 * 1000,
-								);
-							} catch {
-								endDate = parseLocalTime(endTime, tz);
-							}
-						} else {
-							endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-						}
-
-						validateEventTimes(startDate, endDate);
-
-						const event = await calendar.events.insert({
-							calendarId: "primary",
-							requestBody: {
-								summary: title,
-								description: description || "",
-								start: convertToGoogleCalendarFormat(startDate, tz),
-								end: convertToGoogleCalendarFormat(endDate, tz),
-							},
+						const result = await createEvent({
+							title,
+							description,
+							startTime,
+							endTime,
+							timezone: tz,
 						});
 
 						response = {
 							success: true,
 							message: `Created calendar event: ${title}`,
-							event: event.data,
-							eventLink: event.data.htmlLink || undefined,
+							event: result.event,
+							eventLink: result.htmlLink,
 						};
 						break;
 					}
@@ -133,65 +103,22 @@ export const registerManageCalendarEvent = (server: McpServer) => {
 							throw new Error("eventId is required for updating events");
 						}
 
-						const existingEvent = await calendar.events.get({
-							calendarId: "primary",
+						const result = await updateEvent({
 							eventId,
+							title,
+							description,
+							startTime,
+							endTime,
+							timezone: tz,
 						});
 
-						const updateData: {
-							summary?: string;
-							description?: string;
-							start?: { dateTime: string; timeZone: string };
-							end?: { dateTime: string; timeZone: string };
-						} = {};
-
-						if (title !== undefined) updateData.summary = title;
-						if (description !== undefined) updateData.description = description;
-
-						let startDate: Date | undefined;
-						let endDate: Date | undefined;
-
-						if (startTime) {
-							startDate = parseLocalTime(startTime, tz);
-							validateNotInPast(startDate);
-							updateData.start = convertToGoogleCalendarFormat(startDate, tz);
-						} else if (existingEvent.data.start?.dateTime) {
-							startDate = new Date(existingEvent.data.start.dateTime);
-						}
-
-						if (endTime) {
-							if (startDate) {
-								try {
-									const durationMinutes = parseDuration(endTime);
-									endDate = new Date(
-										startDate.getTime() + durationMinutes * 60 * 1000,
-									);
-								} catch {
-									endDate = parseLocalTime(endTime, tz);
-								}
-							} else {
-								endDate = parseLocalTime(endTime, tz);
-							}
-							updateData.end = convertToGoogleCalendarFormat(endDate, tz);
-						} else if (existingEvent.data.end?.dateTime) {
-							endDate = new Date(existingEvent.data.end.dateTime);
-						}
-
-						if (startDate && endDate) {
-							validateEventTimes(startDate, endDate);
-						}
-
-						const event = await calendar.events.update({
-							calendarId: "primary",
-							eventId,
-							requestBody: updateData,
-						});
+						const eventSummary = result.event.summary || title || "event";
 
 						response = {
 							success: true,
-							message: `Updated calendar event: ${event.data.summary || title}`,
-							event: event.data,
-							eventLink: event.data.htmlLink || undefined,
+							message: `Updated calendar event: ${eventSummary}`,
+							event: result.event,
+							eventLink: result.htmlLink,
 						};
 						break;
 					}
@@ -201,25 +128,15 @@ export const registerManageCalendarEvent = (server: McpServer) => {
 							throw new Error("eventId is required for deleting events");
 						}
 
-						// First, fetch the event to check if it's recurring
-						const existingEvent = await calendar.events.get({
-							calendarId: "primary",
-							eventId,
-						});
-
-						const isRecurring = !!existingEvent.data.recurringEventId;
-						const isRecurringMaster = !!existingEvent.data.recurrence;
-
-						await calendar.events.delete({
-							calendarId: "primary",
+						const result = await deleteEvent({
 							eventId,
 							sendUpdates,
 						});
 
 						let deleteMessage = "Deleted calendar event";
-						if (isRecurringMaster) {
+						if (result.isRecurringMaster) {
 							deleteMessage = "Deleted recurring event series (all instances)";
-						} else if (isRecurring) {
+						} else if (result.isRecurring) {
 							deleteMessage = "Deleted single instance of recurring event";
 						}
 
