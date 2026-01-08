@@ -29,12 +29,20 @@ export const registerRunShortcut = (server: McpServer) => {
 					content: [{ type: "text", text: result.stdout?.toString() || "" }],
 				};
 			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				await log("error", "run_shortcut", { shortcutName, inputText }, errorMessage);
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				await log(
+					"error",
+					"run_shortcut",
+					{ shortcutName, inputText },
+					errorMessage,
+				);
 
 				// Check for permission issues
-				const isPermissionError = errorMessage.includes("Couldn't communicate with a helper application") ||
-					errorMessage.includes("helper application");
+				const isPermissionError =
+					errorMessage.includes(
+						"Couldn't communicate with a helper application",
+					) || errorMessage.includes("helper application");
 
 				return {
 					content: [

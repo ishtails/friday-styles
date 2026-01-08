@@ -13,10 +13,12 @@ const DEFAULTS = {
 	objective: {
 		status: "active",
 		keyResults: [],
+		refNotes: [],
 	},
 	idea: {
 		status: "raw",
 		tags: [],
+		refNotes: [],
 	},
 	settings: {
 		currency: config.defaultCurrency,

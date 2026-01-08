@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { config } from "@/config.ts";
 import { log } from "@/lib/utils/logger.ts";
+import { createNote, deleteNote, updateNote } from "@/lib/utils/notes.ts";
 import { resolvePath } from "@/lib/utils/path.ts";
 
 export const registerManageNote = (server: McpServer) => {
@@ -24,19 +25,10 @@ export const registerManageNote = (server: McpServer) => {
 		},
 		async ({ action = "create", path, content }) => {
 			try {
-				if (!config.obsidianVault) {
-					throw new Error("Obsidian vault path not configured");
-				}
-
-				const vaultPath = resolvePath(config.obsidianVault);
-				const fullPath = `${vaultPath}/${path}`;
-
 				if (action === "delete") {
-					const file = Bun.file(fullPath);
-					if (!(await file.exists())) {
-						throw new Error(`Note not found: ${path}`);
-					}
-					await Bun.$`rm ${fullPath}`.quiet();
+					await deleteNote(path);
+					const vaultPath = resolvePath(config.obsidianVault || "");
+					const fullPath = `${vaultPath}/${path}`;
 
 					await log(
 						"info",
@@ -70,11 +62,10 @@ export const registerManageNote = (server: McpServer) => {
 						);
 					}
 
-					await Bun.$`mkdir -p ${vaultPath}`.quiet();
-					const dir = fullPath.substring(0, fullPath.lastIndexOf("/"));
-					await Bun.$`mkdir -p ${dir}`.quiet();
-
-					await Bun.write(fullPath, content);
+					const notePath =
+						action === "create"
+							? await createNote(path, content)
+							: await updateNote(path, content);
 
 					const message =
 						action === "create"
@@ -82,6 +73,9 @@ export const registerManageNote = (server: McpServer) => {
 							: `Updated note: ${path}`;
 
 					await log("info", "manage_note", { action, path }, message);
+
+					const vaultPath = resolvePath(config.obsidianVault || "");
+					const fullPath = `${vaultPath}/${notePath}`;
 
 					return {
 						content: [

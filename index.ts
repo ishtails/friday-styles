@@ -4,12 +4,12 @@ import { config } from "./config.ts";
 import { initializeGenerated } from "./lib/utils/init.ts";
 import { registerMemoryProfileResource } from "./resources/memory-profile.ts";
 import { registerMemoryStateResource } from "./resources/memory-state.ts";
+import { registerGetDate } from "./tools/calendar/get-date.ts";
 import { registerListEvents } from "./tools/calendar/list-events.ts";
 import { registerManageCalendarEvent } from "./tools/calendar/manage-event.ts";
 import { registerCleanupState } from "./tools/cleanup-state.ts";
 import { registerListDrawings } from "./tools/excalidraw/list-drawings.ts";
 import { registerManageDrawings } from "./tools/excalidraw/manage-drawings.ts";
-import { registerGetDate } from "./tools/get-date.ts";
 import { registerHealthCheck } from "./tools/health-check.ts";
 import { registerListNotes } from "./tools/obsidian/list-notes.ts";
 import { registerManageNote } from "./tools/obsidian/manage-note.ts";
@@ -51,4 +51,3 @@ registerListShortcuts(server);
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
-// Server initialized - do not log to stdout as it breaks MCP protocol

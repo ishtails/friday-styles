@@ -13,13 +13,14 @@ import {
 import { getAuthenticatedClient } from "@/lib/utils/google-auth.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
+import { createReferenceNote } from "@/lib/utils/note-ref.ts";
 import { getState, updateState } from "@/lib/utils/state.ts";
 
 export const registerManageGoal = (server: McpServer) => {
 	server.registerTool(
 		"manage_goal",
 		{
-			description: `${config.systemPrompt}\n\nManage active/paused goals with OKR (Objectives and Key Results) structure. Use this for CURRENT goals you're working on. Optionally, ask user if they want to add completed goals to their profile as achievements.`,
+			description: `${config.systemPrompt}\n\nManage active/paused goals with OKR (Objectives and Key Results) structure. Use this for CURRENT goals you're working on. Optionally, ask user if they want to add completed goals to their profile as achievements. Time sensitive goals should be created with a calendar event always. Can create reference notes in Obsidian for additional context/details.`,
 			inputSchema: {
 				action: z
 					.enum(["create", "update", "delete"])
@@ -78,6 +79,12 @@ export const registerManageGoal = (server: McpServer) => {
 					})
 					.optional()
 					.describe("Optional calendar event to create for this goal"),
+				refNote: z
+					.string()
+					.optional()
+					.describe(
+						"Reference note content with additional context/details to create in Obsidian for this goal",
+					),
 			},
 		},
 		async ({
@@ -89,6 +96,7 @@ export const registerManageGoal = (server: McpServer) => {
 			keyResults,
 			status,
 			calendarEvent,
+			refNote,
 		}) => {
 			try {
 				const state = await getState();
@@ -182,6 +190,25 @@ export const registerManageGoal = (server: McpServer) => {
 						}
 					}
 
+					let refNotes: string[] = [];
+					if (refNote) {
+						try {
+							const notePath = await createReferenceNote(
+								"goals",
+								newGoalId,
+								refNote,
+							);
+							refNotes = [notePath];
+						} catch (error) {
+							await log(
+								"warn",
+								"manage_goal",
+								{ action, title },
+								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
+							);
+						}
+					}
+
 					const newGoal: Objective = {
 						id: newGoalId,
 						title,
@@ -190,6 +217,7 @@ export const registerManageGoal = (server: McpServer) => {
 						keyResults: processedKeyResults,
 						...(calendarEventId && { calendarEventId }),
 						...(calendarEventLink && { calendarEventLink }),
+						refNotes,
 						createdAt: now,
 						updatedAt: now,
 						status: status || "active",
@@ -252,15 +280,34 @@ export const registerManageGoal = (server: McpServer) => {
 					);
 					let newKrCounter = totalKRs + 1;
 
+					let refNotes = existingGoal.refNotes || [];
+					if (refNote) {
+						try {
+							const notePath = await createReferenceNote(
+								"goals",
+								goalId,
+								refNote,
+							);
+							refNotes = [...refNotes, notePath];
+						} catch (error) {
+							await log(
+								"warn",
+								"manage_goal",
+								{ action, goalId },
+								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
+							);
+						}
+					}
+
 					const updatedGoal: Objective = {
 						...existingGoal,
 						...(title && { title }),
 						...(description !== undefined && { description }),
 						...(category && { category }),
 						...(status && { status }),
+						refNotes,
 						...(keyResults && {
 							keyResults: keyResults.map((kr) => {
-								// Try to find existing KR by ID or description
 								const existingKr = existingGoal.keyResults.find(
 									(ekr) =>
 										ekr.id === kr.id || ekr.description === kr.description,

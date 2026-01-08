@@ -13,6 +13,7 @@ const PROFILE_FILE = Bun.file(resolvePath(config.profileFile));
 const DEFAULTS = {
 	profileItem: {
 		tags: [],
+		refNotes: [],
 	},
 };
 

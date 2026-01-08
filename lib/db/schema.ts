@@ -20,6 +20,7 @@ const ObjectiveSchema = z.object({
 	keyResults: z.array(KeyResultSchema).default([]),
 	calendarEventId: z.string().optional(), // Google Calendar event ID
 	calendarEventLink: z.string().optional(), // Google Calendar event HTML link
+	refNotes: z.array(z.string()).default([]),
 	createdAt: z.number(), // Unix epoch milliseconds
 	updatedAt: z.number(), // Unix epoch milliseconds
 	status: z
@@ -34,6 +35,7 @@ const IdeaSchema = z.object({
 	category: z.string(), // Flexible: users can use any category string
 	tags: z.array(z.string()).default([]),
 	relatedGoalId: z.string().optional(), // link to objective if applicable
+	refNotes: z.array(z.string()).default([]),
 	createdAt: z.number(), // Unix epoch milliseconds
 	status: z.enum(["raw", "organized", "actionable", "archived"]).default("raw"),
 	priority: z.enum(["low", "medium", "high"]).optional(),
@@ -59,6 +61,7 @@ const ProfileItemSchema = z.object({
 	content: z.string(), // Main content/description
 	tags: z.array(z.string()).default([]), // Cross-cutting organization
 	metadata: z.record(z.string(), z.unknown()).optional(), // Custom properties per item
+	refNotes: z.array(z.string()).default([]),
 	createdAt: z.number(), // Unix epoch milliseconds
 	updatedAt: z.number().optional(),
 });

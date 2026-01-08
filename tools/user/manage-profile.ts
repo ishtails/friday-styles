@@ -4,6 +4,7 @@ import { config } from "@/config.ts";
 import type { ProfileItem } from "@/lib/db/schema.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
+import { createReferenceNote } from "@/lib/utils/note-ref.ts";
 import {
 	addItem,
 	deleteItem,
@@ -16,7 +17,7 @@ export const registerManageProfile = (server: McpServer) => {
 	server.registerTool(
 		"manage_profile",
 		{
-			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context.`,
+			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context. Can create reference notes in Obsidian for additional context/details.`,
 			inputSchema: {
 				action: z
 					.enum(["add", "get", "update", "delete", "list"])
@@ -43,9 +44,15 @@ export const registerManageProfile = (server: McpServer) => {
 					.record(z.string(), z.unknown())
 					.optional()
 					.describe("Custom metadata properties for the item"),
+				refNote: z
+					.string()
+					.optional()
+					.describe(
+						"Reference note content with additional context/details to create in Obsidian for this profile item",
+					),
 			},
 		},
-		async ({ action, itemId, category, content, tags, metadata }) => {
+		async ({ action, itemId, category, content, tags, metadata, refNote }) => {
 			try {
 				if (action === "add") {
 					if (!category || !content) {
@@ -57,12 +64,32 @@ export const registerManageProfile = (server: McpServer) => {
 					const profile = await getProfile();
 					const newItemId = generateId("p", profile.items);
 
+					let refNotes: string[] = [];
+					if (refNote) {
+						try {
+							const notePath = await createReferenceNote(
+								"profile",
+								newItemId,
+								refNote,
+							);
+							refNotes = [notePath];
+						} catch (error) {
+							await log(
+								"warn",
+								"manage_profile",
+								{ action, category },
+								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
+							);
+						}
+					}
+
 					const newItem: ProfileItem = {
 						id: newItemId,
 						category,
 						content,
 						tags: tags || [],
 						metadata,
+						refNotes,
 						createdAt: Date.now(),
 					};
 
@@ -124,11 +151,37 @@ export const registerManageProfile = (server: McpServer) => {
 						throw new Error("Item ID is required for updating a profile item");
 					}
 
+					const profile = await getProfile();
+					const existingItem = profile.items.find((i) => i.id === itemId);
+					if (!existingItem) {
+						throw new Error(`Profile item with ID ${itemId} not found`);
+					}
+
+					let refNotes = existingItem.refNotes || [];
+					if (refNote) {
+						try {
+							const notePath = await createReferenceNote(
+								"profile",
+								itemId,
+								refNote,
+							);
+							refNotes = [...refNotes, notePath];
+						} catch (error) {
+							await log(
+								"warn",
+								"manage_profile",
+								{ action, itemId },
+								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
+							);
+						}
+					}
+
 					const updates: Partial<ProfileItem> = {};
 					if (category) updates.category = category;
 					if (content) updates.content = content;
 					if (tags) updates.tags = tags;
 					if (metadata) updates.metadata = metadata;
+					updates.refNotes = refNotes;
 
 					await updateItem(itemId, updates);
 					const updatedProfile = await getProfile();

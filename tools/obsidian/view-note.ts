@@ -2,6 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { config } from "@/config.ts";
 import { log } from "@/lib/utils/logger.ts";
+import { readNote } from "@/lib/utils/notes.ts";
 import { resolvePath } from "@/lib/utils/path.ts";
 
 export const registerViewNote = (server: McpServer) => {
@@ -15,19 +16,9 @@ export const registerViewNote = (server: McpServer) => {
 		},
 		async ({ path }) => {
 			try {
-				if (!config.obsidianVault) {
-					throw new Error("Obsidian vault path not configured");
-				}
-
-				const vaultPath = resolvePath(config.obsidianVault);
+				const content = await readNote(path);
+				const vaultPath = resolvePath(config.obsidianVault || "");
 				const fullPath = `${vaultPath}/${path}`;
-
-				const file = Bun.file(fullPath);
-				if (!(await file.exists())) {
-					throw new Error(`Note not found: ${path}`);
-				}
-
-				const content = await file.text();
 
 				await log("info", "view_note", { path }, `Viewed note: ${path}`);
 

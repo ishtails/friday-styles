@@ -60,12 +60,20 @@ export const registerListShortcuts = (server: McpServer) => {
 					],
 				};
 			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				await log("error", "list_shortcuts", { folder, listFolders }, errorMessage);
+				const errorMessage =
+					error instanceof Error ? error.message : String(error);
+				await log(
+					"error",
+					"list_shortcuts",
+					{ folder, listFolders },
+					errorMessage,
+				);
 
 				// Check for permission issues
-				const isPermissionError = errorMessage.includes("Couldn't communicate with a helper application") ||
-					errorMessage.includes("helper application");
+				const isPermissionError =
+					errorMessage.includes(
+						"Couldn't communicate with a helper application",
+					) || errorMessage.includes("helper application");
 
 				return {
 					content: [
