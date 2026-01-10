@@ -300,3 +300,106 @@ export function compressLib(
 			: item.elements,
 	}));
 }
+
+export interface DesignSystem {
+	version: number;
+	defaults: {
+		strokeColor?: string;
+		strokeWidth?: number;
+		strokeStyle?: "solid" | "dashed" | "dotted";
+		strokeSharpness?: "round" | "sharp";
+		fillStyle?: "solid" | "hachure" | "cross-hatch" | "zigzag" | "zigzag-line";
+		backgroundColor?: string;
+		roughness?: number;
+		opacity?: number;
+		roundness?: { type: number } | null;
+		fontSize?: number;
+		fontFamily?: number;
+		textAlign?: "left" | "center" | "right";
+		verticalAlign?: "top" | "middle" | "bottom";
+	};
+}
+
+const defaultDesignSystem: DesignSystem = {
+	version: 1,
+	defaults: {
+		strokeColor: "#000000",
+		strokeWidth: 2,
+		strokeStyle: "solid",
+		strokeSharpness: "round",
+		fillStyle: "solid",
+		backgroundColor: "transparent",
+		roughness: 1,
+		opacity: 100,
+		roundness: { type: 1 },
+		fontSize: 20,
+		fontFamily: 1,
+		textAlign: "left",
+		verticalAlign: "top",
+	},
+};
+
+export async function getDesignSystem(): Promise<DesignSystem> {
+	const designsDir = resolvePath(config.designsDir);
+	const designSystemPath = resolve(designsDir, "system.json");
+	const file = Bun.file(designSystemPath);
+
+	if (!(await file.exists())) {
+		await Bun.$`mkdir -p ${designsDir}`.quiet();
+		await Bun.write(designSystemPath, JSON.stringify(defaultDesignSystem, null, 2));
+		return defaultDesignSystem;
+	}
+
+	try {
+		const content = await file.text();
+		const parsed = JSON.parse(content);
+		return parsed as DesignSystem;
+	} catch {
+		return defaultDesignSystem;
+	}
+}
+
+export async function updateDesignSystem(updates: Partial<DesignSystem["defaults"]>): Promise<DesignSystem> {
+	const current = await getDesignSystem();
+	const updated: DesignSystem = {
+		...current,
+		defaults: { ...current.defaults, ...updates },
+	};
+	const designsDir = resolvePath(config.designsDir);
+	const designSystemPath = resolve(designsDir, "system.json");
+	await Bun.write(designSystemPath, JSON.stringify(updated, null, 2));
+	return updated;
+}
+
+export async function applyDesignSystemDefaults(element: Partial<ExcalidrawElement>): Promise<ExcalidrawElement> {
+	const designSystem = await getDesignSystem();
+	const defaults = designSystem.defaults;
+
+	return {
+		id: element.id || generateElementId(new Set()),
+		type: element.type || "rectangle",
+		x: element.x ?? 0,
+		y: element.y ?? 0,
+		width: element.width ?? 100,
+		height: element.height ?? 100,
+		strokeColor: element.strokeColor ?? defaults.strokeColor,
+		strokeWidth: element.strokeWidth ?? defaults.strokeWidth,
+		strokeStyle: element.strokeStyle ?? defaults.strokeStyle,
+		strokeSharpness: element.strokeSharpness ?? defaults.strokeSharpness,
+		fillStyle: element.fillStyle ?? defaults.fillStyle,
+		backgroundColor: element.backgroundColor ?? defaults.backgroundColor,
+		roughness: element.roughness ?? defaults.roughness,
+		opacity: element.opacity ?? defaults.opacity,
+		roundness: element.roundness ?? defaults.roundness,
+		fontSize: element.fontSize ?? defaults.fontSize,
+		fontFamily: element.fontFamily ?? defaults.fontFamily,
+		textAlign: element.textAlign ?? defaults.textAlign,
+		verticalAlign: element.verticalAlign ?? defaults.verticalAlign,
+		angle: element.angle,
+		points: element.points,
+		text: element.text,
+		baseline: element.baseline,
+		groupIds: element.groupIds,
+		frameId: element.frameId,
+	} as ExcalidrawElement;
+}

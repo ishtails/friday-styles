@@ -9,7 +9,7 @@ export const registerViewStatus = (server: McpServer) => {
 	server.registerTool(
 		"view_status",
 		{
-			description: `${config.systemPrompt}\n\nView raw data for goals, ideas, and profile. Returns unprocessed data for LLM to parse and format.`,
+			description: `${config.systemPrompt}\n\nView raw data for goals, ideas, and profile. Returns unprocessed data for LLM to parse and format. Return with corresponding ids for each item.`,
 			inputSchema: {
 				view: z
 					.enum(["all", "goals", "ideas", "profile"])
