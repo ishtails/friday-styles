@@ -346,7 +346,10 @@ export async function getDesignSystem(): Promise<DesignSystem> {
 
 	if (!(await file.exists())) {
 		await Bun.$`mkdir -p ${designsDir}`.quiet();
-		await Bun.write(designSystemPath, JSON.stringify(defaultDesignSystem, null, 2));
+		await Bun.write(
+			designSystemPath,
+			JSON.stringify(defaultDesignSystem, null, 2),
+		);
 		return defaultDesignSystem;
 	}
 
@@ -359,7 +362,9 @@ export async function getDesignSystem(): Promise<DesignSystem> {
 	}
 }
 
-export async function updateDesignSystem(updates: Partial<DesignSystem["defaults"]>): Promise<DesignSystem> {
+export async function updateDesignSystem(
+	updates: Partial<DesignSystem["defaults"]>,
+): Promise<DesignSystem> {
 	const current = await getDesignSystem();
 	const updated: DesignSystem = {
 		...current,
@@ -371,7 +376,9 @@ export async function updateDesignSystem(updates: Partial<DesignSystem["defaults
 	return updated;
 }
 
-export async function applyDesignSystemDefaults(element: Partial<ExcalidrawElement>): Promise<ExcalidrawElement> {
+export async function applyDesignSystemDefaults(
+	element: Partial<ExcalidrawElement>,
+): Promise<ExcalidrawElement> {
 	const designSystem = await getDesignSystem();
 	const defaults = designSystem.defaults;
 

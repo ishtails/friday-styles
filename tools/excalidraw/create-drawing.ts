@@ -2,8 +2,9 @@ import { resolve } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { config } from "@/config.ts";
-import { log } from "@/lib/utils/logger.ts";
 import { resolvePath } from "@/lib/utils/path.ts";
+import { respond } from "@/lib/utils/respond.ts";
+import { verify } from "@/lib/utils/verification.ts";
 
 export const registerCreateDrawing = (server: McpServer) => {
 	server.registerTool(
@@ -14,11 +15,15 @@ export const registerCreateDrawing = (server: McpServer) => {
 				path: z
 					.string()
 					.optional()
-					.describe("Path to drawing file. Optional - filename will be generated from title if not provided."),
+					.describe(
+						"Path to drawing file. Optional - filename will be generated from title if not provided.",
+					),
 				title: z
 					.string()
 					.optional()
-					.describe("Title for new drawing (used to generate filename if path not provided)."),
+					.describe(
+						"Title for new drawing (used to generate filename if path not provided).",
+					),
 				overwrite: z
 					.boolean()
 					.optional()
@@ -28,6 +33,7 @@ export const registerCreateDrawing = (server: McpServer) => {
 		},
 		async ({ path, title, overwrite = false }) => {
 			const designsDir = resolvePath(config.designsDir);
+			const params = { path, title, overwrite };
 
 			try {
 				await Bun.$`mkdir -p ${designsDir}`.quiet();
@@ -40,12 +46,30 @@ export const registerCreateDrawing = (server: McpServer) => {
 					fullPath = resolve(designsDir, filename);
 				} else if (title) {
 					const now = new Date();
-					const monthAbbrevs = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"] as const;
+					const monthAbbrevs = [
+						"jan",
+						"feb",
+						"mar",
+						"apr",
+						"may",
+						"jun",
+						"jul",
+						"aug",
+						"sep",
+						"oct",
+						"nov",
+						"dec",
+					] as const;
 					const month = monthAbbrevs[now.getMonth()];
 					const day = `${now.getDate()}`.padStart(2, "0");
 					const year = `${now.getFullYear()}`.slice(-2);
 					const datePrefix = `${month}${day}${year}`;
-					const safeTitle = title.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "untitled";
+					const safeTitle =
+						title
+							.trim()
+							.toLowerCase()
+							.replace(/[^a-z0-9]+/g, "-")
+							.replace(/^-+|-+$/g, "") || "untitled";
 					filename = `${safeTitle}.excalidraw`;
 					fullPath = resolve(designsDir, filename);
 
@@ -74,26 +98,22 @@ export const registerCreateDrawing = (server: McpServer) => {
 				};
 
 				await Bun.write(fullPath, JSON.stringify(drawing, null, 2));
-				await log("info", "create_drawing", { path, title }, `Created: ${filename}`);
 
-				return {
-					content: [
-						{
-							type: "text",
-							text: JSON.stringify(
-								{ success: true, message: `Created: ${filename}`, filename, path: fullPath, designsDir },
-								null,
-								2,
-							),
-						},
-					],
-				};
+				const verification = await verify.fileWrite(fullPath, {
+					title: drawing.title,
+					type: drawing.type,
+				});
+
+				return respond.ok(
+					{ filename, path: fullPath, designsDir },
+					`Created: ${filename}`,
+					{ toolName: "create_drawing", params, verification },
+				);
 			} catch (error) {
-				const errorMsg = `Failed to create drawing: ${String(error)}`;
-				await log("error", "create_drawing", { path, title }, errorMsg);
-				return {
-					content: [{ type: "text", text: JSON.stringify({ success: false, error: errorMsg }, null, 2) }],
-				};
+				return respond.err(error instanceof Error ? error : String(error), {
+					toolName: "create_drawing",
+					params,
+				});
 			}
 		},
 	);

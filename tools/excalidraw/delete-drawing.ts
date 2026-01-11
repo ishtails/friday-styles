@@ -18,7 +18,9 @@ export const registerDeleteDrawing = (server: McpServer) => {
 			const designsDir = resolvePath(config.designsDir);
 
 			try {
-				const filename = path.endsWith(".excalidraw") ? path : `${path}.excalidraw`;
+				const filename = path.endsWith(".excalidraw")
+					? path
+					: `${path}.excalidraw`;
 				const fullPath = resolve(designsDir, filename);
 				const file = Bun.file(fullPath);
 
@@ -33,7 +35,11 @@ export const registerDeleteDrawing = (server: McpServer) => {
 					content: [
 						{
 							type: "text",
-							text: JSON.stringify({ success: true, message: `Deleted: ${path}`, path: fullPath }, null, 2),
+							text: JSON.stringify(
+								{ success: true, message: `Deleted: ${path}`, path: fullPath },
+								null,
+								2,
+							),
 						},
 					],
 				};
@@ -41,7 +47,16 @@ export const registerDeleteDrawing = (server: McpServer) => {
 				const errorMsg = `Failed to delete drawing: ${String(error)}`;
 				await log("error", "delete_drawing", { path }, errorMsg);
 				return {
-					content: [{ type: "text", text: JSON.stringify({ success: false, error: errorMsg }, null, 2) }],
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{ success: false, error: errorMsg },
+								null,
+								2,
+							),
+						},
+					],
 				};
 			}
 		},

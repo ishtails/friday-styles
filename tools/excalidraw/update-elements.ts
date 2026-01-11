@@ -16,14 +16,18 @@ export const registerUpdateElements = (server: McpServer) => {
 				path: z.string().describe("Path to drawing file."),
 				elementUpdates: z
 					.array(z.any())
-					.describe("Array of partial element objects with 'id' field to update. Only specified properties will be updated."),
+					.describe(
+						"Array of partial element objects with 'id' field to update. Only specified properties will be updated.",
+					),
 			},
 		},
 		async ({ path, elementUpdates }) => {
 			const designsDir = resolvePath(config.designsDir);
 
 			try {
-				const filename = path.endsWith(".excalidraw") ? path : `${path}.excalidraw`;
+				const filename = path.endsWith(".excalidraw")
+					? path
+					: `${path}.excalidraw`;
 				const fullPath = resolve(designsDir, filename);
 				const file = Bun.file(fullPath);
 
@@ -38,8 +42,12 @@ export const registerUpdateElements = (server: McpServer) => {
 					throw new Error("elementUpdates array is required");
 				}
 
-				const updates = elementUpdates as unknown as Array<Partial<ExcalidrawElement> & { id: string }>;
-				const idToUpdate = new Map(updates.map((update) => [update.id, update]));
+				const updates = elementUpdates as unknown as Array<
+					Partial<ExcalidrawElement> & { id: string }
+				>;
+				const idToUpdate = new Map(
+					updates.map((update) => [update.id, update]),
+				);
 
 				const updatedElements = drawing.elements.map((el) => {
 					const update = idToUpdate.get(el.id);
@@ -50,16 +58,25 @@ export const registerUpdateElements = (server: McpServer) => {
 					return el;
 				});
 
-				const updatedCount = Array.from(idToUpdate.keys()).filter((id) => drawing.elements.some((el) => el.id === id)).length;
+				const updatedCount = Array.from(idToUpdate.keys()).filter((id) =>
+					drawing.elements.some((el) => el.id === id),
+				).length;
 
 				if (updatedCount === 0) {
-					throw new Error(`No elements found with provided IDs: ${updates.map((u) => u.id).join(", ")}`);
+					throw new Error(
+						`No elements found with provided IDs: ${updates.map((u) => u.id).join(", ")}`,
+					);
 				}
 
 				const updatedDrawing = { ...drawing, elements: updatedElements };
 				await Bun.write(fullPath, JSON.stringify(updatedDrawing, null, 2));
 
-				await log("info", "update_elements", { path, updatedCount }, `Updated ${updatedCount} elements`);
+				await log(
+					"info",
+					"update_elements",
+					{ path, updatedCount },
+					`Updated ${updatedCount} elements`,
+				);
 
 				return {
 					content: [
@@ -83,7 +100,16 @@ export const registerUpdateElements = (server: McpServer) => {
 				const errorMsg = `Failed to update elements: ${String(error)}`;
 				await log("error", "update_elements", { path }, errorMsg);
 				return {
-					content: [{ type: "text", text: JSON.stringify({ success: false, error: errorMsg }, null, 2) }],
+					content: [
+						{
+							type: "text",
+							text: JSON.stringify(
+								{ success: false, error: errorMsg },
+								null,
+								2,
+							),
+						},
+					],
 				};
 			}
 		},

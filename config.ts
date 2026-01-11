@@ -7,7 +7,7 @@ Handle creative assets (Excalidraw, Obsidian) strategically. Keep users accounta
 Tactical partner, not just another AI.`;
 
 export const defaultCurrency = "USD";
-export const generatedDir = Bun.env.GENERATED_DIR || "./generated";
+export const generatedDir = Bun.env.GENERATED_DIR || "./vault";
 
 export const config = {
 	generatedDir,
