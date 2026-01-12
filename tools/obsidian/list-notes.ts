@@ -21,7 +21,9 @@ export const registerListNotes = (server: McpServer) => {
 				folder: z
 					.string()
 					.optional()
-					.describe("Optional subfolder within the vault to list notes from (relative to vault root)."),
+					.describe(
+						"Optional subfolder within the vault to list notes from (relative to vault root).",
+					),
 				dirOnly: z
 					.boolean()
 					.optional()
@@ -36,7 +38,7 @@ export const registerListNotes = (server: McpServer) => {
 
 				const vaultRoot = resolvePath(config.obsidianVault);
 				const searchPath = folder ? join(vaultRoot, folder) : vaultRoot;
-				
+
 				// Ensure searchPath is within vaultRoot for safety
 				if (!searchPath.startsWith(vaultRoot)) {
 					throw new Error("Folder path must be within the obsidian vault");
@@ -45,7 +47,7 @@ export const registerListNotes = (server: McpServer) => {
 				await Bun.$`mkdir -p ${searchPath}`.quiet();
 
 				const allFiles = await readdir(searchPath, { recursive: true });
-				
+
 				const filteredResults = [];
 
 				for (const relativePath of allFiles) {
@@ -59,13 +61,15 @@ export const registerListNotes = (server: McpServer) => {
 					if (!dirOnly && !relativePath.endsWith(".md")) continue;
 
 					// Calculate path relative to vault root for consistent output
-					const vaultRelativePath = folder ? join(folder, relativePath) : relativePath;
+					const vaultRelativePath = folder
+						? join(folder, relativePath)
+						: relativePath;
 
 					// Filter by keywords
 					const filename = relativePath.split("/").pop() || "";
 					if (keywords.length > 0) {
-						const matches = keywords.some(kw => 
-							filename.toLowerCase().includes(kw.toLowerCase())
+						const matches = keywords.some((kw) =>
+							filename.toLowerCase().includes(kw.toLowerCase()),
 						);
 						if (!matches) continue;
 					}
@@ -74,7 +78,7 @@ export const registerListNotes = (server: McpServer) => {
 						filteredResults.push({
 							path: vaultRelativePath,
 							absolutePath: fullPath,
-							type: "directory"
+							type: "directory",
 						});
 					} else {
 						const frontmatter: Record<string, unknown> = {};
@@ -119,14 +123,23 @@ export const registerListNotes = (server: McpServer) => {
 					}
 				}
 
-				await log("info", "list_notes", { keywords, folder, dirOnly }, `Listed ${filteredResults.length} items`);
+				await log(
+					"info",
+					"list_notes",
+					{ keywords, folder, dirOnly },
+					`Listed ${filteredResults.length} items`,
+				);
 
 				return {
 					content: [
 						{
 							type: "text",
 							text: JSON.stringify(
-								{ success: true, count: filteredResults.length, notes: filteredResults },
+								{
+									success: true,
+									count: filteredResults.length,
+									notes: filteredResults,
+								},
 								null,
 								2,
 							),
@@ -135,7 +148,12 @@ export const registerListNotes = (server: McpServer) => {
 				};
 			} catch (error) {
 				const errorMsg = `Failed to list notes: ${String(error)}`;
-				await log("error", "list_notes", { keywords, folder, dirOnly }, errorMsg);
+				await log(
+					"error",
+					"list_notes",
+					{ keywords, folder, dirOnly },
+					errorMsg,
+				);
 				return {
 					content: [
 						{
