@@ -20,7 +20,7 @@ export const registerListNotes = (server: McpServer) => {
 				const vaultPath = resolvePath(config.obsidianVault);
 				await Bun.$`mkdir -p ${vaultPath}`.quiet();
 
-				const files = await readdir(vaultPath, { recursive: true });
+				const files = await readdir(vaultPath, { recursive: false });
 				const noteFiles = files.filter(
 					(f) => typeof f === "string" && f.endsWith(".md"),
 				);

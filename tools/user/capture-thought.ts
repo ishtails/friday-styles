@@ -45,11 +45,8 @@ export const registerCaptureThought = (server: McpServer) => {
 				let refNotes: string[] = [];
 				if (refNote) {
 					try {
-						const notePath = await createReferenceNote(
-							"ideas",
-							ideaId,
-							refNote,
-						);
+						const noteTitle = `${category} Idea - Reference`;
+						const notePath = await createReferenceNote(noteTitle, refNote);
 						refNotes = [notePath];
 					} catch (error) {
 						await log(

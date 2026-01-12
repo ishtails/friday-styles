@@ -67,11 +67,8 @@ export const registerManageProfile = (server: McpServer) => {
 					let refNotes: string[] = [];
 					if (refNote) {
 						try {
-							const notePath = await createReferenceNote(
-								"profile",
-								newItemId,
-								refNote,
-							);
+							const noteTitle = `${category} - Reference`;
+							const notePath = await createReferenceNote(noteTitle, refNote);
 							refNotes = [notePath];
 						} catch (error) {
 							await log(
@@ -160,11 +157,8 @@ export const registerManageProfile = (server: McpServer) => {
 					let refNotes = existingItem.refNotes || [];
 					if (refNote) {
 						try {
-							const notePath = await createReferenceNote(
-								"profile",
-								itemId,
-								refNote,
-							);
+							const noteTitle = `${existingItem.category} - Reference`;
+							const notePath = await createReferenceNote(noteTitle, refNote);
 							refNotes = [...refNotes, notePath];
 						} catch (error) {
 							await log(

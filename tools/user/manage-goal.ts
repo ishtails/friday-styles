@@ -158,11 +158,8 @@ export const registerManageGoal = (server: McpServer) => {
 					let refNotes: string[] = [];
 					if (refNote) {
 						try {
-							const notePath = await createReferenceNote(
-								"goals",
-								newGoalId,
-								refNote,
-							);
+							const noteTitle = `${title} - Reference`;
+							const notePath = await createReferenceNote(noteTitle, refNote);
 							refNotes = [notePath];
 						} catch (error) {
 							await log(
@@ -248,11 +245,8 @@ export const registerManageGoal = (server: McpServer) => {
 					let refNotes = existingGoal.refNotes || [];
 					if (refNote) {
 						try {
-							const notePath = await createReferenceNote(
-								"goals",
-								goalId,
-								refNote,
-							);
+							const noteTitle = `${existingGoal.title} - Reference`;
+							const notePath = await createReferenceNote(noteTitle, refNote);
 							refNotes = [...refNotes, notePath];
 						} catch (error) {
 							await log(
