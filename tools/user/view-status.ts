@@ -9,7 +9,7 @@ export const registerViewStatus = (server: McpServer) => {
 	server.registerTool(
 		"view_status",
 		{
-			description: `${config.systemPrompt}\n\nView raw data for goals, ideas, and profile. Returns unprocessed data for LLM to parse and format. Return with corresponding ids for each item.`,
+			description: `${config.systemPrompt}\n\nView raw data for goals, ideas, and profile. Returns unprocessed data for LLM to parse and format.\n\n**Profile:** Persistent data organized by categories (achievements, skills, projects, personal, music, preferences, knowledge, facts, history, etc.). Each item has: id, category, content, tags, metadata, refNotes, timestamps. Profile persists across state rotations.\n\n**Goals:** OKR format with keyResults, calendarEventId, status (active/paused/completed/archived).\n\n**Ideas:** Have status (raw/organized/actionable/archived), priority, relatedGoalId.\n\nFilter by category (goals/ideas/profile) or tags (ideas/profile).`,
 			inputSchema: {
 				view: z
 					.enum(["all", "goals", "ideas", "profile"])
@@ -18,7 +18,9 @@ export const registerViewStatus = (server: McpServer) => {
 				category: z
 					.string()
 					.optional()
-					.describe("Filter by category (for goals and ideas)"),
+					.describe(
+						"Filter by category (works for goals, ideas, and profile items)",
+					),
 				tags: z
 					.array(z.string())
 					.optional()
@@ -68,10 +70,16 @@ export const registerViewStatus = (server: McpServer) => {
 
 				if ((view === "profile" || view === "all") && profile) {
 					let items = profile.items;
+					if (category) {
+						items = items.filter((item) => item.category === category);
+					}
 					if (tags && tags.length > 0) {
 						items = items.filter((item) =>
 							tags.every((tag) => item.tags.includes(tag)),
 						);
+					}
+					if (limit !== undefined) {
+						items = items.slice(0, limit);
 					}
 					output.profile = { ...profile, items };
 				}

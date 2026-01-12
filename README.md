@@ -45,20 +45,32 @@ Add to Cursor settings (`Cmd/Ctrl + ,` → MCP):
 - **`view_status`** - View goals, ideas, and profile data
 
 ### Calendar
-- **`check_schedule`** - Get upcoming Google Calendar events and current goals
+- **`get_date`** - Get current date and time. Returns timestamp, UTC ISO datetime string, user's timezone, and local time. Shows example formats accepted by calendar event tools.
+- **`list_events`** - Get upcoming Google Calendar events and current goals from state. Returns raw data for LLM to parse and present.
 - **`manage_event`** - Create/update/delete Google Calendar events
 
 ### Notes (Obsidian)
 - **`list_notes`** - List all notes with metadata
 - **`manage_note`** - Create/update/delete notes
+- **`organise_notes`** - Move note files into a subdirectory and update all references in state and profile
 - **`view_note`** - View specific note content
 
 ### Drawings (Excalidraw)
 - **`list_drawings`** - List all Excalidraw drawings
-- **`manage_drawings`** - Create/update/delete Excalidraw drawings
+- **`create_drawing`** - Create a new Excalidraw drawing file with minimal structure
+- **`delete_drawing`** - Delete an entire Excalidraw drawing file
+- **`append_elements`** - Add elements to an Excalidraw drawing. Automatically applies design system defaults to elements unless explicitly provided.
+- **`read_elements`** - Read elements from an Excalidraw drawing with flexible granularity (summary, full, by IDs, or by range)
+- **`update_elements`** - Update existing elements in an Excalidraw drawing by ID
+- **`list_libraries`** - Discover available Excalidraw libraries. Returns library names, descriptions, item counts, and item names. Libraries are also available as MCP resources.
+- **`view_library`** - View library items from a specific library file with optional compression and filtering
 
 ### Media (YouTube/yt-dlp)
 - **`download_media`** - Download videos or audio from YouTube and other supported sites using yt-dlp. Supports configurable quality, format options (video/audio/both), and custom output paths. Downloads are stored in the configured downloads directory.
+
+### Shortcuts (Apple Shortcuts)
+- **`list_shortcuts`** - List Apple Shortcuts (optionally filter by folder or list folders)
+- **`run_shortcut`** - Run an Apple Shortcut with optional input text
 
 ### System
 - **`health_check`** - Check server health and validate state/profile
@@ -67,18 +79,22 @@ Add to Cursor settings (`Cmd/Ctrl + ,` → MCP):
 
 - **`{serverName}://memory/profile`** - Persistent profile layer (YAML) - survives state rotations
 - **`{serverName}://memory/state`** - Active memory state (YAML) - goals, ideas, settings
+- **`{serverName}://library/{name}`** - Excalidraw library resources (available for libraries in `resources/excalidraw/`)
 
 > Replace `{serverName}` with your configured server name from `config.ts`
 
 ## Data Storage
 
-- `generated/state.yaml` - Active state (goals, ideas)
-- `generated/profile.yaml` - Persistent profile (achievements, skills, etc.)
-- `generated/changelog.txt` - Activity log
-- `generated/designs/` - Excalidraw drawings
-- `generated/notes/` - Obsidian vault
-- `generated/downloads/` - Downloaded media files (videos/audio)
-- `backups/` - Timestamped state backups from cleanup operations
+By default, data is stored in the `./vault` directory (configurable via `GENERATED_DIR` environment variable):
+
+- `{vault}/state.yaml` - Active state (goals, ideas)
+- `{vault}/profile.yaml` - Persistent profile (achievements, skills, etc.)
+- `{vault}/changelog.txt` - Activity log
+- `{vault}/designs/` - Excalidraw drawings
+- `{vault}/notes/` - Obsidian vault
+- `{vault}/downloads/` - Downloaded media files (videos/audio)
+- `{vault}/backups/` - Timestamped state backups from cleanup operations
+- `{vault}/secrets/credentials.json` - Google OAuth credentials
 
 ## Configuration
 
@@ -92,16 +108,16 @@ Customize your assistant by editing `config.ts` directly:
 ### Environment Variables
 
 Environment variables (defaults in `config.ts`):
-- `STATE_FILE` - State file path
-- `PROFILE_FILE` - Profile file path
-- `LOG_FILE` - Changelog path
-- `DESIGNS_DIR` - Drawings directory
-- `OBSIDIAN_VAULT` - Notes vault path
-- `DOWNLOADS_DIR` - Media downloads directory
-- `BACKUPS_DIR` - Backups directory
-- `GOOGLE_TOKEN_FILE` - Google OAuth credentials path
+- `GENERATED_DIR` - Base directory for all generated files (default: `./vault`)
+- `TIMEZONE` - Timezone for calendar events (defaults to system timezone)
+- `GOOGLE_CLIENT_ID` - Google OAuth client ID (required for calendar features)
+- `GOOGLE_CLIENT_SECRET` - Google OAuth client secret (required for calendar features)
 
 ## Scripts
 
-- `bun run authenticate` - manually authenticate with Google (MCP can automatically authenticates when needed)
-- `bun run cleanup` - manually reset state and create a backup (MCP can call this internally)
+- `bun run authenticate` - Manually authenticate with Google (MCP can automatically authenticate when needed)
+- `bun run cleanup` - Manually reset state and create a backup (MCP can call this internally)
+- `bun run merge-libraries` - Merge Excalidraw library files
+- `bun run dev` - Run server with hot reload
+- `bun run start` - Run server
+- `bun run check` - Run Biome linter/formatter

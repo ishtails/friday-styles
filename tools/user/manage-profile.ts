@@ -16,7 +16,7 @@ export const registerManageProfile = (server: McpServer) => {
 	server.registerTool(
 		"manage_profile",
 		{
-			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context.\n\nIMPORTANT: To create reference notes for profile items, you MUST use the manage_note tool separately. For profile items, always create overview notes with title "{Category} - Overview".`,
+			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, projects, skills, personal, music, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context.\n\nIMPORTANT: To create reference notes for profile items, you MUST use the manage_note tool separately. For profile items, always create overview notes with title "{Category} - Overview".`,
 			inputSchema: {
 				action: z
 					.enum(["add", "get", "update", "delete", "list"])
