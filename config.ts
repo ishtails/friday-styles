@@ -15,7 +15,6 @@ export const config = {
 	profileFile: `${generatedDir}/profile.yaml`,
 	logFile: `${generatedDir}/changelog.txt`,
 	designsDir: `${generatedDir}/designs`,
-	designSystemFile: "./system.json",
 	librariesDir: `./resources/excalidraw`,
 	obsidianVault: `${generatedDir}/notes`,
 	backupsDir: `${generatedDir}/backups`,

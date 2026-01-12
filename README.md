@@ -56,14 +56,10 @@ Add to Cursor settings (`Cmd/Ctrl + ,` → MCP):
 - **`view_note`** - View specific note content
 
 ### Drawings (Excalidraw)
+- **`manage_design`** - Create, append to, update, or delete Excalidraw drawings. Elements are used exactly as provided with no defaults or transformations. For large drawings, use multiple append calls to add elements in chunks.
 - **`list_drawings`** - List all Excalidraw drawings
-- **`create_drawing`** - Create a new Excalidraw drawing file with minimal structure
-- **`delete_drawing`** - Delete an entire Excalidraw drawing file
-- **`append_elements`** - Add elements to an Excalidraw drawing. Automatically applies design system defaults to elements unless explicitly provided.
-- **`read_elements`** - Read elements from an Excalidraw drawing with flexible granularity (summary, full, by IDs, or by range)
-- **`update_elements`** - Update existing elements in an Excalidraw drawing by ID
 - **`list_libraries`** - Discover available Excalidraw libraries. Returns library names, descriptions, item counts, and item names. Libraries are also available as MCP resources.
-- **`view_library`** - View library items from a specific library file with optional compression and filtering
+- **`view_library`** - View elements from a specific library file with pagination (10 elements per page). All library items are flattened into a single elements array.
 
 ### Media (YouTube/yt-dlp)
 - **`download_media`** - Download videos or audio from YouTube and other supported sites using yt-dlp. Supports configurable quality, format options (video/audio/both), and custom output paths. Downloads are stored in the configured downloads directory.
