@@ -1,5 +1,9 @@
+import { mkdir } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { config } from "@/config.ts";
 import { resolvePath } from "./path.ts";
+import { getProfile, updateProfile } from "./profile.ts";
+import { getState, updateState } from "./state.ts";
 
 export async function generateNotePath(title: string): Promise<string> {
 	if (!config.obsidianVault) {
@@ -19,7 +23,7 @@ export async function generateNotePath(title: string): Promise<string> {
 	let counter = 1;
 
 	while (true) {
-		const fullPath = `${vaultPath}/${filename}`;
+		const fullPath = join(vaultPath, filename);
 		const file = Bun.file(fullPath);
 		if (!(await file.exists())) {
 			break;
@@ -40,9 +44,10 @@ export async function writeNote(
 	}
 
 	const vaultPath = resolvePath(config.obsidianVault);
-	const fullPath = `${vaultPath}/${path}`;
+	const fullPath = join(vaultPath, path);
+	const dirPath = dirname(fullPath);
 
-	await Bun.$`mkdir -p ${vaultPath}`.quiet();
+	await mkdir(dirPath, { recursive: true });
 	await Bun.write(fullPath, content);
 	return path;
 }
@@ -123,8 +128,8 @@ export async function addLinkToNote(
 	linkPath: string,
 ): Promise<void> {
 	const content = await readNote(path);
-	const linkTitle = extractNoteTitle(linkPath);
-	const linkText = `[[${linkTitle}]]`;
+	const linkName = linkPath.replace(/\.md$/, "");
+	const linkText = `[[${linkName}]]`;
 
 	if (content.includes(linkText)) {
 		return;
@@ -147,11 +152,71 @@ export async function createReferenceNote(
 		if (related.length > 0) {
 			const relatedSection =
 				"\n\n## Related\n" +
-				related.map((r) => `- [[${extractNoteTitle(r)}]]`).join("\n");
+				related.map((r) => `- [[${r.replace(/\.md$/, "")}]]`).join("\n");
 			finalContent = content + relatedSection;
 		}
 	}
 
 	await writeNote(path, finalContent);
 	return path;
+}
+
+export async function moveNote(
+	oldPath: string,
+	newPath: string,
+): Promise<string> {
+	if (!config.obsidianVault) {
+		throw new Error("Obsidian vault path not configured");
+	}
+
+	const vaultPath = resolvePath(config.obsidianVault);
+	const oldFullPath = `${vaultPath}/${oldPath}`;
+	const newFullPath = `${vaultPath}/${newPath}`;
+
+	const file = Bun.file(oldFullPath);
+	if (!(await file.exists())) {
+		throw new Error(`Note not found: ${oldPath}`);
+	}
+
+	await Bun.$`mkdir -p ${newFullPath.split("/").slice(0, -1).join("/")}`.quiet();
+	await Bun.$`mv ${oldFullPath} ${newFullPath}`.quiet();
+	return newPath;
+}
+
+export async function updateStateReferences(
+	oldPath: string,
+	newPath: string,
+): Promise<void> {
+	const state = await getState();
+
+	const updatedGoals = state.data.goals.map((goal) => ({
+		...goal,
+		refNotes: goal.refNotes.map((path) => (path === oldPath ? newPath : path)),
+	}));
+
+	const updatedIdeas = state.data.ideas.map((idea) => ({
+		...idea,
+		refNotes: idea.refNotes.map((path) => (path === oldPath ? newPath : path)),
+	}));
+
+	await updateState({
+		data: {
+			goals: updatedGoals,
+			ideas: updatedIdeas,
+		},
+	});
+}
+
+export async function updateProfileReferences(
+	oldPath: string,
+	newPath: string,
+): Promise<void> {
+	const profile = await getProfile();
+
+	const updatedItems = profile.items.map((item) => ({
+		...item,
+		refNotes: item.refNotes.map((path) => (path === oldPath ? newPath : path)),
+	}));
+
+	await updateProfile({ items: updatedItems });
 }

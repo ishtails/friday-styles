@@ -14,7 +14,7 @@ export const registerManageNote = (server: McpServer) => {
 	server.registerTool(
 		"manage_note",
 		{
-			description: `${config.systemPrompt}\n\nCreate, update, or delete a specific note. Title parameter is mandatory and will be used to generate a readable filename. Filenames follow format: {slugified-title}.md. All notes are stored flat in the notes folder (no subfolders, no refs folder). When creating reference notes for goals, always create an overview file first: {Goal Title} - Overview. If additional detail notes are needed, create them and add [[Note Title]] links in the overview. Only the overview file path is stored - detail notes are linked within the overview. Use Obsidian [[note-title]] syntax for linking.`,
+			description: `${config.systemPrompt}\n\nCreate, update, or delete a specific note. Before creating a new note, ALWAYS first check for the existence of related notes (using list_notes with similar keywords) and see if any common folder exists where the new note should be placed. Title parameter is mandatory and will be used to generate a readable filename if path is not provided. Filenames follow format: {slugified-title}.md. When creating reference notes for goals, always create an overview file first: {Goal Title} - Overview. If additional detail notes are needed, create them and add [[Note Title]] links in the overview. Use Obsidian [[note-title]] syntax for linking. Note creation handles directory checking and creation if the provided path string includes subfolders.`,
 			inputSchema: {
 				action: z
 					.enum(["create", "update", "delete"])
@@ -28,7 +28,7 @@ export const registerManageNote = (server: McpServer) => {
 					.string()
 					.optional()
 					.describe(
-						"Relative path from vault root (optional, generated from title if not provided)",
+						"Relative path from vault root, including folder names if applicable (optional, generated from title if not provided). Example: 'Projects/MyNewProject/meeting.md'",
 					),
 				content: z
 					.string()

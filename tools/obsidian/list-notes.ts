@@ -1,6 +1,7 @@
-import { readdir } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
 import { config } from "@/config.ts";
 import { log } from "@/lib/utils/logger.ts";
 import { resolvePath } from "@/lib/utils/path.ts";
@@ -9,75 +10,123 @@ export const registerListNotes = (server: McpServer) => {
 	server.registerTool(
 		"list_notes",
 		{
-			description: `${config.systemPrompt}\n\nQuery notes and return metadata (paths and frontmatter). Does not return note content.`,
+			description: `${config.systemPrompt}\n\nQuery notes and return metadata (paths and frontmatter). Does not return note content. Supports filtering by keywords in filenames and can return directories only.`,
+			inputSchema: {
+				keywords: z
+					.array(z.string())
+					.optional()
+					.describe(
+						"Keywords to filter filenames (returns all if empty or omitted). Matches if any keyword is present in the filename.",
+					),
+				folder: z
+					.string()
+					.optional()
+					.describe("Optional subfolder within the vault to list notes from (relative to vault root)."),
+				dirOnly: z
+					.boolean()
+					.optional()
+					.describe("If true, only returns directories within the vault."),
+			},
 		},
-		async () => {
+		async ({ keywords = [], folder = "", dirOnly = false }) => {
 			try {
 				if (!config.obsidianVault) {
 					throw new Error("Obsidian vault path not configured");
 				}
 
-				const vaultPath = resolvePath(config.obsidianVault);
-				await Bun.$`mkdir -p ${vaultPath}`.quiet();
+				const vaultRoot = resolvePath(config.obsidianVault);
+				const searchPath = folder ? join(vaultRoot, folder) : vaultRoot;
+				
+				// Ensure searchPath is within vaultRoot for safety
+				if (!searchPath.startsWith(vaultRoot)) {
+					throw new Error("Folder path must be within the obsidian vault");
+				}
 
-				const files = await readdir(vaultPath, { recursive: false });
-				const noteFiles = files.filter(
-					(f) => typeof f === "string" && f.endsWith(".md"),
-				);
+				await Bun.$`mkdir -p ${searchPath}`.quiet();
 
-				const notes = await Promise.all(
-					noteFiles.map(async (filename) => {
-						const fullPath = resolve(vaultPath, filename);
+				const allFiles = await readdir(searchPath, { recursive: true });
+				
+				const filteredResults = [];
+
+				for (const relativePath of allFiles) {
+					const fullPath = join(searchPath, relativePath);
+					const stats = await stat(fullPath);
+					const isDirectory = stats.isDirectory();
+
+					// Filter by dirOnly
+					if (dirOnly && !isDirectory) continue;
+					if (!dirOnly && isDirectory) continue;
+					if (!dirOnly && !relativePath.endsWith(".md")) continue;
+
+					// Calculate path relative to vault root for consistent output
+					const vaultRelativePath = folder ? join(folder, relativePath) : relativePath;
+
+					// Filter by keywords
+					const filename = relativePath.split("/").pop() || "";
+					if (keywords.length > 0) {
+						const matches = keywords.some(kw => 
+							filename.toLowerCase().includes(kw.toLowerCase())
+						);
+						if (!matches) continue;
+					}
+
+					if (isDirectory) {
+						filteredResults.push({
+							path: vaultRelativePath,
+							absolutePath: fullPath,
+							type: "directory"
+						});
+					} else {
 						const frontmatter: Record<string, unknown> = {};
 						try {
 							const file = Bun.file(fullPath);
-							if (await file.exists()) {
-								const content = await file.slice(0, 2048).text();
-								const frontmatterMatch = content.match(
-									/^---\s*\n([\s\S]*?)\n---\s*\n/,
-								);
-								if (frontmatterMatch?.[1]) {
-									for (const line of frontmatterMatch[1].split("\n")) {
-										const match = line.match(/^(\w+):\s*(.+)$/);
-										if (match?.[1] && match?.[2]) {
-											let value: unknown = match[2].trim();
-											if (value === "true") value = true;
-											else if (value === "false") value = false;
-											else if (/^\d+$/.test(value as string))
-												value = parseInt(value as string, 10);
-											else if (/^\[.*\]$/.test(value as string)) {
-												value = (value as string)
-													.slice(1, -1)
-													.split(",")
-													.map((v) => v.trim().replace(/^["']|["']$/g, ""));
-											} else {
-												value = (value as string).replace(/^["']|["']$/g, "");
-											}
-											frontmatter[match[1]] = value;
+							const content = await file.slice(0, 2048).text();
+							const frontmatterMatch = content.match(
+								/^---\s*\n([\s\S]*?)\n---\s*\n/,
+							);
+							if (frontmatterMatch?.[1]) {
+								for (const line of frontmatterMatch[1].split("\n")) {
+									const match = line.match(/^(\w+):\s*(.+)$/);
+									if (match?.[1] && match?.[2]) {
+										let value: unknown = match[2].trim();
+										if (value === "true") value = true;
+										else if (value === "false") value = false;
+										else if (/^\d+$/.test(value as string))
+											value = parseInt(value as string, 10);
+										else if (/^\[.*\]$/.test(value as string)) {
+											value = (value as string)
+												.slice(1, -1)
+												.split(",")
+												.map((v) => v.trim().replace(/^["']|["']$/g, ""));
+										} else {
+											value = (value as string).replace(/^["']|["']$/g, "");
 										}
+										frontmatter[match[1]] = value;
 									}
 								}
 							}
 						} catch {
 							// Ignore parsing errors
 						}
-						return {
-							path: filename,
+
+						filteredResults.push({
+							path: vaultRelativePath,
 							filename,
 							absolutePath: fullPath,
+							type: "file",
 							...(Object.keys(frontmatter).length > 0 && { frontmatter }),
-						};
-					}),
-				);
+						});
+					}
+				}
 
-				await log("info", "list_notes", {}, `Listed ${notes.length} notes`);
+				await log("info", "list_notes", { keywords, folder, dirOnly }, `Listed ${filteredResults.length} items`);
 
 				return {
 					content: [
 						{
 							type: "text",
 							text: JSON.stringify(
-								{ success: true, count: notes.length, notes },
+								{ success: true, count: filteredResults.length, notes: filteredResults },
 								null,
 								2,
 							),
@@ -86,7 +135,7 @@ export const registerListNotes = (server: McpServer) => {
 				};
 			} catch (error) {
 				const errorMsg = `Failed to list notes: ${String(error)}`;
-				await log("error", "list_notes", {}, errorMsg);
+				await log("error", "list_notes", { keywords, folder, dirOnly }, errorMsg);
 				return {
 					content: [
 						{
