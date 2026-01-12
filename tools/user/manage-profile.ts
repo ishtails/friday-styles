@@ -4,7 +4,6 @@ import { config } from "@/config.ts";
 import type { ProfileItem } from "@/lib/db/schema.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
-import { createReferenceNote } from "@/lib/utils/notes.ts";
 import {
 	addItem,
 	deleteItem,
@@ -17,7 +16,7 @@ export const registerManageProfile = (server: McpServer) => {
 	server.registerTool(
 		"manage_profile",
 		{
-			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context. Can create reference markdown notes for additional context/details.`,
+			description: `${config.systemPrompt}\n\nManage your persistent profile data (achievements, skills, preferences, knowledge, facts, history). Use this to add, update, delete, or query profile items. Profile data persists across state rotations and serves as your permanent context.\n\nIMPORTANT: To create reference notes for profile items, you MUST use the manage_note tool separately. For profile items, always create overview notes with title "{Category} - Overview".`,
 			inputSchema: {
 				action: z
 					.enum(["add", "get", "update", "delete", "list"])
@@ -44,15 +43,9 @@ export const registerManageProfile = (server: McpServer) => {
 					.record(z.string(), z.unknown())
 					.optional()
 					.describe("Custom metadata properties for the item"),
-				refNote: z
-					.string()
-					.optional()
-					.describe(
-						"Reference markdown note content with additional context/details to create for this profile item. Always prefer adding a reference note when user provides more than a paragraph of context/details.",
-					),
 			},
 		},
-		async ({ action, itemId, category, content, tags, metadata, refNote }) => {
+		async ({ action, itemId, category, content, tags, metadata }) => {
 			try {
 				if (action === "add") {
 					if (!category || !content) {
@@ -64,21 +57,7 @@ export const registerManageProfile = (server: McpServer) => {
 					const profile = await getProfile();
 					const newItemId = generateId("p", profile.items);
 
-					let refNotes: string[] = [];
-					if (refNote) {
-						try {
-							const noteTitle = `${category} - Reference`;
-							const notePath = await createReferenceNote(noteTitle, refNote);
-							refNotes = [notePath];
-						} catch (error) {
-							await log(
-								"warn",
-								"manage_profile",
-								{ action, category },
-								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
-							);
-						}
-					}
+					const refNotes: string[] = [];
 
 					const newItem: ProfileItem = {
 						id: newItemId,
@@ -154,21 +133,7 @@ export const registerManageProfile = (server: McpServer) => {
 						throw new Error(`Profile item with ID ${itemId} not found`);
 					}
 
-					let refNotes = existingItem.refNotes || [];
-					if (refNote) {
-						try {
-							const noteTitle = `${existingItem.category} - Reference`;
-							const notePath = await createReferenceNote(noteTitle, refNote);
-							refNotes = [...refNotes, notePath];
-						} catch (error) {
-							await log(
-								"warn",
-								"manage_profile",
-								{ action, itemId },
-								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
-							);
-						}
-					}
+					const refNotes = existingItem.refNotes || [];
 
 					const updates: Partial<ProfileItem> = {};
 					if (category) updates.category = category;

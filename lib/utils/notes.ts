@@ -31,7 +31,10 @@ export async function generateNotePath(title: string): Promise<string> {
 	return filename;
 }
 
-export async function writeNote(path: string, content: string): Promise<string> {
+export async function writeNote(
+	path: string,
+	content: string,
+): Promise<string> {
 	if (!config.obsidianVault) {
 		throw new Error("Obsidian vault path not configured");
 	}
@@ -76,11 +79,79 @@ export async function readNote(path: string): Promise<string> {
 	return await file.text();
 }
 
+export function extractNoteTitle(path: string): string {
+	const baseName = path.replace(/\.md$/, "");
+	return baseName
+		.split("-")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join(" ");
+}
+
+export async function findRelatedNotes(
+	category: string,
+	excludePath?: string,
+): Promise<string[]> {
+	if (!config.obsidianVault) {
+		return [];
+	}
+
+	const vaultPath = resolvePath(config.obsidianVault);
+	const files = await Bun.$`find ${vaultPath} -maxdepth 1 -name "*.md"`.text();
+	const noteFiles = files
+		.trim()
+		.split("\n")
+		.filter((f): f is string => Boolean(f?.endsWith(".md")))
+		.map((f) => f.replace(`${vaultPath}/`, ""))
+		.filter((f) => f !== excludePath);
+
+	const related: string[] = [];
+	for (const file of noteFiles.slice(0, 10)) {
+		try {
+			const content = await readNote(file);
+			if (content.toLowerCase().includes(category.toLowerCase())) {
+				related.push(file);
+				if (related.length >= 3) break;
+			}
+		} catch {}
+	}
+
+	return related;
+}
+
+export async function addLinkToNote(
+	path: string,
+	linkPath: string,
+): Promise<void> {
+	const content = await readNote(path);
+	const linkTitle = extractNoteTitle(linkPath);
+	const linkText = `[[${linkTitle}]]`;
+
+	if (content.includes(linkText)) {
+		return;
+	}
+
+	const updatedContent = `${content}${content.endsWith("\n") ? "" : "\n"}${linkText}\n`;
+	await writeNote(path, updatedContent);
+}
+
 export async function createReferenceNote(
 	title: string,
 	content: string,
+	options?: { isOverview?: boolean; relatedCategory?: string },
 ): Promise<string> {
 	const path = await generateNotePath(title);
-	await writeNote(path, content);
+	let finalContent = content;
+
+	if (options?.isOverview && options.relatedCategory) {
+		const related = await findRelatedNotes(options.relatedCategory, path);
+		if (related.length > 0) {
+			const relatedSection =
+				"\n\n## Related\n" +
+				related.map((r) => `- [[${extractNoteTitle(r)}]]`).join("\n");
+			finalContent = content + relatedSection;
+		}
+	}
+
+	await writeNote(path, finalContent);
 	return path;
 }

@@ -5,14 +5,13 @@ import type { KeyResult, Objective } from "@/lib/db/schema.ts";
 import { createEvent } from "@/lib/utils/calendar.ts";
 import { generateId } from "@/lib/utils/id.ts";
 import { log } from "@/lib/utils/logger.ts";
-import { createReferenceNote } from "@/lib/utils/notes.ts";
 import { getState, updateState } from "@/lib/utils/state.ts";
 
 export const registerManageGoal = (server: McpServer) => {
 	server.registerTool(
 		"manage_goal",
 		{
-			description: `${config.systemPrompt}\n\nManage active/paused goals with OKR (Objectives and Key Results) structure. Use this for CURRENT goals you're working on. Optionally, ask user if they want to add completed goals to their profile as achievements. Time sensitive goals should be created with a calendar event always. Can create reference markdown notes for additional context/details.`,
+			description: `${config.systemPrompt}\n\nManage active/paused goals with OKR (Objectives and Key Results) structure. Use this for CURRENT goals you're working on. Optionally, ask user if they want to add completed goals to their profile as achievements. Time sensitive goals should be created with a calendar event always.\n\nIMPORTANT: To create reference notes for goals, you MUST use the manage_note tool separately. For goals, always create overview notes with title "{Goal Title} - Overview".`,
 			inputSchema: {
 				action: z
 					.enum(["create", "update", "delete"])
@@ -71,12 +70,6 @@ export const registerManageGoal = (server: McpServer) => {
 					})
 					.optional()
 					.describe("Optional calendar event to create for this goal"),
-				refNote: z
-					.string()
-					.optional()
-					.describe(
-						"Reference markdown note content with additional context/details to create for this goal. Always prefer adding a reference note when user provides more than a paragraph of context/details.",
-					),
 			},
 		},
 		async ({
@@ -88,7 +81,6 @@ export const registerManageGoal = (server: McpServer) => {
 			keyResults,
 			status,
 			calendarEvent,
-			refNote,
 		}) => {
 			try {
 				const state = await getState();
@@ -155,21 +147,7 @@ export const registerManageGoal = (server: McpServer) => {
 						}
 					}
 
-					let refNotes: string[] = [];
-					if (refNote) {
-						try {
-							const noteTitle = `${title} - Reference`;
-							const notePath = await createReferenceNote(noteTitle, refNote);
-							refNotes = [notePath];
-						} catch (error) {
-							await log(
-								"warn",
-								"manage_goal",
-								{ action, title },
-								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
-							);
-						}
-					}
+					const refNotes: string[] = [];
 
 					const newGoal: Objective = {
 						id: newGoalId,
@@ -242,21 +220,7 @@ export const registerManageGoal = (server: McpServer) => {
 					);
 					let newKrCounter = totalKRs + 1;
 
-					let refNotes = existingGoal.refNotes || [];
-					if (refNote) {
-						try {
-							const noteTitle = `${existingGoal.title} - Reference`;
-							const notePath = await createReferenceNote(noteTitle, refNote);
-							refNotes = [...refNotes, notePath];
-						} catch (error) {
-							await log(
-								"warn",
-								"manage_goal",
-								{ action, goalId },
-								`Failed to create reference note: ${error instanceof Error ? error.message : "Unknown error"}`,
-							);
-						}
-					}
+					const refNotes = existingGoal.refNotes || [];
 
 					const updatedGoal: Objective = {
 						...existingGoal,
