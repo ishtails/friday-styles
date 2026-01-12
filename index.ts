@@ -23,7 +23,6 @@ import { registerCaptureThought } from "./tools/user/capture-thought.ts";
 import { registerManageGoal } from "./tools/user/manage-goal.ts";
 import { registerManageProfile } from "./tools/user/manage-profile.ts";
 import { registerViewStatus } from "./tools/user/view-status.ts";
-import { registerDownloadMedia } from "./tools/ytdlp/download.ts";
 
 const server = new McpServer({
 	name: config.serverName,
@@ -49,7 +48,6 @@ registerManageNote(server);
 registerListNotes(server);
 registerOrganiseNotes(server);
 registerViewNote(server);
-registerDownloadMedia(server);
 registerListEvents(server);
 registerManageCalendarEvent(server);
 registerRunShortcut(server);

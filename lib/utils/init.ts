@@ -13,13 +13,11 @@ export const initializeGenerated = async (): Promise<void> => {
 	const profileFilePath = resolvePath(config.profileFile);
 	const logFilePath = resolvePath(config.logFile);
 	const designsDir = resolvePath(config.designsDir);
-	const downloadsDir = resolvePath(config.downloadsDir);
 	const generatedDir = dirname(stateFilePath);
 
-	// Ensure base generated, designs, and downloads directories exist
+	// Ensure base generated and designs directories exist
 	await Bun.$`mkdir -p ${generatedDir}`.quiet();
 	await Bun.$`mkdir -p ${designsDir}`.quiet();
-	await Bun.$`mkdir -p ${downloadsDir}`.quiet();
 
 	// Ensure state.yaml exists with a valid default state
 	const stateFile = Bun.file(stateFilePath);

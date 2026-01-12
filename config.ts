@@ -18,7 +18,6 @@ export const config = {
 	librariesDir: `./resources/excalidraw`,
 	obsidianVault: `${generatedDir}/notes`,
 	backupsDir: `${generatedDir}/backups`,
-	downloadsDir: `${generatedDir}/downloads`,
 	googleTokenFile: `${generatedDir}/secrets/credentials.json`,
 	timezone:
 		Bun.env.TIMEZONE || Intl.DateTimeFormat().resolvedOptions().timeZone,

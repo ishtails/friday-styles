@@ -61,9 +61,6 @@ Add to Cursor settings (`Cmd/Ctrl + ,` → MCP):
 - **`list_libraries`** - Discover available Excalidraw libraries. Returns library names, descriptions, item counts, and item names. Libraries are also available as MCP resources.
 - **`view_library`** - View elements from a specific library file with pagination (10 elements per page). All library items are flattened into a single elements array.
 
-### Media (YouTube/yt-dlp)
-- **`download_media`** - Download videos or audio from YouTube and other supported sites using yt-dlp. Supports configurable quality, format options (video/audio/both), and custom output paths. Downloads are stored in the configured downloads directory.
-
 ### Shortcuts (Apple Shortcuts)
 - **`list_shortcuts`** - List Apple Shortcuts (optionally filter by folder or list folders)
 - **`run_shortcut`** - Run an Apple Shortcut with optional input text
